@@ -6,9 +6,11 @@ import { loadProfile, loadSessions, recordFinish, saveSessions } from './storage
 beforeEach(() => localStorage.clear());
 
 describe('storage recovery', () => {
-  it('defaults to Daylight and preserves an explicitly saved Midnight theme', () => {
+  it('migrates a legacy Midnight default to Daylight and retains new explicit choices', () => {
     expect(loadProfile().settings.theme).toBe('light');
     localStorage.setItem('wordverse-profile-v1', JSON.stringify({ settings: { theme: 'dark' } }));
+    expect(loadProfile().settings.theme).toBe('light');
+    localStorage.setItem('wordverse-profile-v1', JSON.stringify({ settings: { theme: 'dark', themeSelected: true } }));
     expect(loadProfile().settings.theme).toBe('dark');
     localStorage.setItem('wordverse-profile-v1', JSON.stringify({ settings: { theme: 'unknown' } }));
     expect(loadProfile().settings.theme).toBe('light');

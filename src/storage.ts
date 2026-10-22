@@ -1,12 +1,12 @@
 import { DAILY_VERSION, evaluateGuess, type Mode, type Session } from './engine';
 
 export type RecordEntry = { id: string; mode: Mode; date: string; won: boolean; attempts: number; score: number; hints: number };
-export type Settings = { sound: boolean; animations: boolean; theme: 'dark' | 'light'; highContrast: boolean };
+export type Settings = { sound: boolean; animations: boolean; theme: 'dark' | 'light'; highContrast: boolean; themeSelected?: boolean };
 export type Profile = { xp: number; records: RecordEntry[]; bestStreak: number; settings: Settings };
 
 const PROFILE_KEY = 'wordverse-profile-v1';
 const SESSIONS_KEY = 'wordverse-sessions-v1';
-const DEFAULT_SETTINGS: Settings = { sound: false, animations: true, theme: 'light', highContrast: false };
+const DEFAULT_SETTINGS: Settings = { sound: false, animations: true, theme: 'light', highContrast: false, themeSelected: false };
 
 function read(key: string): unknown {
   try { return JSON.parse(localStorage.getItem(key) ?? 'null'); } catch { return null; }
@@ -34,8 +34,11 @@ export function loadProfile(): Profile {
     settings: {
       sound: typeof s.sound === 'boolean' ? s.sound : false,
       animations: typeof s.animations === 'boolean' ? s.animations : true,
-      theme: s.theme === 'dark' ? 'dark' : 'light',
+      // Older builds saved Midnight as the default, so an unmarked dark value
+      // does not prove the player chose it. Only retain explicit selections.
+      theme: s.themeSelected === true && s.theme === 'dark' ? 'dark' : 'light',
       highContrast: typeof s.highContrast === 'boolean' ? s.highContrast : false,
+      themeSelected: s.themeSelected === true,
     },
   };
 }
