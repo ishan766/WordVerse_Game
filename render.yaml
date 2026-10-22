@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: wordverse-arena
+    runtime: node
+    plan: free
+    buildCommand: npm ci
+    startCommand: npm run arena:start
+    healthCheckPath: /health
+    envVars:
+      - key: ARENA_ORIGINS
+        value: https://word-verse-game.vercel.app

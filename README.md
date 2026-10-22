@@ -32,6 +32,15 @@ Open `http://localhost:5173` in two to four separate browser sessions. One playe
 
 The Vite frontend can remain on Vercel, but Vercel's static frontend alone cannot host this long-running Socket.IO process. Deploy `npm run arena:start` as a persistent Node service with WebSocket support, using Node.js 20.19+ or 22.12+. The server uses `PORT`, then `ARENA_PORT`, then 3001. Configure `ARENA_ORIGINS` as a comma-separated list of exact frontend origins (for example your Vercel domain). Set `VITE_ARENA_URL` to the public HTTPS URL of that service **at frontend build time**, then rebuild/redeploy the frontend. Browsers on an HTTPS page require an HTTPS/WSS backend. The client shows a clear unavailable message if `VITE_ARENA_URL` is absent in production. For phone testing on a local network, set `ARENA_ORIGINS` to include the phone's frontend origin, such as `http://192.168.1.10:5173`; the dev client automatically uses the same host on port 3001. See `.env.example`; it contains placeholders only. The server health endpoint is `GET /health`.
 
+For the current `https://word-verse-game.vercel.app` frontend, `render.yaml` supplies a Render Web Service blueprint with the correct start command, health check, and allowed origin. To enable public rooms:
+
+1. In Render, create a Blueprint from the `ishan766/WordVerse_Game` GitHub repository. Wait for its Web Service to become healthy. Its `/health` endpoint should return `{"ok":true}`.
+2. Copy the service's public HTTPS URL, such as `https://your-service.onrender.com` (use the actual URL Render assigns).
+3. In the Vercel project settings, add `VITE_ARENA_URL` for Production with that URL as its value. Redeploy the frontend after saving; Vite embeds this variable during the build.
+4. Reload the site, create a room, and join from another browser session. If the frontend domain changes, update `ARENA_ORIGINS` on the server to match the new exact origin.
+
+The Blueprint uses Render's Free plan to avoid an automatic paid service. Free services can spin down after inactivity, and this Arena server keeps rooms only in memory, so a spin-down or redeploy ends active rooms. Use a continuously running single instance for a live competition demo.
+
 On Windows PowerShell with script execution disabled, use `npm.cmd` in place of `npm`.
 
 ## Verify and build
