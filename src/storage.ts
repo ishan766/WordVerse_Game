@@ -6,7 +6,7 @@ export type Profile = { xp: number; records: RecordEntry[]; bestStreak: number; 
 
 const PROFILE_KEY = 'wordverse-profile-v1';
 const SESSIONS_KEY = 'wordverse-sessions-v1';
-const DEFAULT_SETTINGS: Settings = { sound: false, animations: true, theme: 'dark', highContrast: false };
+const DEFAULT_SETTINGS: Settings = { sound: false, animations: true, theme: 'light', highContrast: false };
 
 function read(key: string): unknown {
   try { return JSON.parse(localStorage.getItem(key) ?? 'null'); } catch { return null; }
@@ -34,7 +34,7 @@ export function loadProfile(): Profile {
     settings: {
       sound: typeof s.sound === 'boolean' ? s.sound : false,
       animations: typeof s.animations === 'boolean' ? s.animations : true,
-      theme: s.theme === 'light' ? 'light' : 'dark',
+      theme: s.theme === 'dark' ? 'dark' : 'light',
       highContrast: typeof s.highContrast === 'boolean' ? s.highContrast : false,
     },
   };

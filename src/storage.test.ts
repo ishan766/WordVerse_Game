@@ -6,6 +6,14 @@ import { loadProfile, loadSessions, recordFinish, saveSessions } from './storage
 beforeEach(() => localStorage.clear());
 
 describe('storage recovery', () => {
+  it('defaults to Daylight and preserves an explicitly saved Midnight theme', () => {
+    expect(loadProfile().settings.theme).toBe('light');
+    localStorage.setItem('wordverse-profile-v1', JSON.stringify({ settings: { theme: 'dark' } }));
+    expect(loadProfile().settings.theme).toBe('dark');
+    localStorage.setItem('wordverse-profile-v1', JSON.stringify({ settings: { theme: 'unknown' } }));
+    expect(loadProfile().settings.theme).toBe('light');
+  });
+
   it('keeps valid progress while rejecting impossible feedback and statuses', () => {
     const valid = submitGuess({ ...createSession('classic', '2026-10-22', 'APPLE'), draft: 'CRANE' }).session;
     const invalid = { ...createSession('hard', '2026-10-22', 'APPLE'), guesses: [

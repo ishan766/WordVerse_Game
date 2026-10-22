@@ -10,6 +10,23 @@ beforeEach(() => localStorage.clear());
 afterEach(() => { cleanup(); vi.useRealTimers(); vi.restoreAllMocks(); });
 
 describe('interface flows', () => {
+  it('starts in Daylight and lets players choose and retain Midnight', () => {
+    const first = render(<App />);
+    expect(first.container.querySelector('.app')?.classList.contains('theme-light')).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
+    const midnight = screen.getByRole('switch', { name: 'Midnight theme' });
+    expect(midnight.getAttribute('aria-checked')).toBe('false');
+    expect(screen.getByText('SWITCH TO MIDNIGHT')).toBeTruthy();
+    fireEvent.click(midnight);
+    expect(first.container.querySelector('.app')?.classList.contains('theme-dark')).toBe(true);
+    first.unmount();
+    const second = render(<App />);
+    expect(second.container.querySelector('.app')?.classList.contains('theme-dark')).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
+    fireEvent.click(screen.getByRole('switch', { name: 'Midnight theme' }));
+    expect(second.container.querySelector('.app')?.classList.contains('theme-light')).toBe(true);
+  });
+
   it('accepts physical keys, backspace, and one valid guess', async () => {
     const user = userEvent.setup();
     render(<App />);
