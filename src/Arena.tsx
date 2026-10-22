@@ -8,6 +8,7 @@ import './arena.css';
 
 const STORE = 'wordverse-arena-session-v1';
 const url = import.meta.env.VITE_ARENA_URL || (import.meta.env.DEV ? `http://${location.hostname}:3001` : '');
+const connectionError = 'Arena server is unavailable right now. Retrying automatically…';
 const rows = ['QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM'];
 function savedSession(): { code: string; token: string } | null {
   try { const value = JSON.parse(sessionStorage.getItem(STORE) || 'null'); return typeof value?.code === 'string' && typeof value?.token === 'string' ? value : null; } catch { return null; }
@@ -48,12 +49,12 @@ export default function Arena({ onHome, onSolo }: { onHome: () => void; onSolo: 
   useEffect(() => {
     if (!url) { setConnection('offline'); setMessage('Arena server URL is not configured for this deployment.'); return; }
     const s = io(url, { autoConnect: true, reconnection: true }); socket.current = s;
-    s.on('connect', () => { setConnection('online'); const saved = savedSession(); const inviteCode = new URLSearchParams(location.search).get('room')?.toUpperCase(); if (saved && (!inviteCode || saved.code === inviteCode)) s.timeout(5000).emitWithAck('arena:action', { type: 'resume', ...saved }).then((reply: ArenaReply) => {
+    s.on('connect', () => { setConnection('online'); setMessage(previous => previous === connectionError ? '' : previous); const saved = savedSession(); const inviteCode = new URLSearchParams(location.search).get('room')?.toUpperCase(); if (saved && (!inviteCode || saved.code === inviteCode)) s.timeout(5000).emitWithAck('arena:action', { type: 'resume', ...saved }).then((reply: ArenaReply) => {
       if (reply.ok && reply.view) { serverOffset.current = reply.view.serverNow - Date.now(); setView(reply.view); viewRef.current = reply.view; setMessage('Reconnected to your room.'); }
       else { clearSession(); setMessage(reply.ok ? '' : reply.error); }
     }).catch(() => setMessage('Could not restore your room.')); });
     s.on('disconnect', () => setConnection('offline'));
-    s.on('connect_error', () => { setConnection('offline'); setMessage('Arena server is unavailable. Check the server URL and connection.'); });
+    s.on('connect_error', () => { setConnection('offline'); setMessage(connectionError); });
     s.on('arena:state', (next: ArenaView) => { serverOffset.current = next.serverNow - Date.now(); setView(next); viewRef.current = next; });
     return () => { s.removeAllListeners(); s.disconnect(); socket.current = null; };
   }, []);
