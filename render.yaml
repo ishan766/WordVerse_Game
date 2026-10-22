@@ -8,4 +8,4 @@ services:
     healthCheckPath: /health
     envVars:
       - key: ARENA_ORIGINS
-        value: https://word-verse-game.vercel.app
+        value: https://wordversegame.vercel.app,https://word-verse-game.vercel.app

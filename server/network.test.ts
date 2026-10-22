@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { io as connect, type Socket } from 'socket.io-client';
 import { createArenaServer } from './index';
 import { RoomManager } from './roomManager';
@@ -9,6 +10,38 @@ let server: ReturnType<typeof createArenaServer> | undefined;
 afterEach(async () => { clients.forEach(c => c.disconnect()); clients.length = 0; await server?.close(); server = undefined; });
 
 describe('live Arena synchronization', () => {
+  it('accepts both production origins and rejects other origins for polling and WebSocket', async () => {
+    const blueprint = readFileSync(new URL('../render.yaml', import.meta.url), 'utf8');
+    const origins = blueprint.match(/key: ARENA_ORIGINS\s+value: ([^\r\n]+)/)?.[1];
+    expect(origins).toBe('https://wordversegame.vercel.app,https://word-verse-game.vercel.app');
+    server = createArenaServer(new RoomManager(), origins);
+    await new Promise<void>(resolve => server!.http.listen(0, '127.0.0.1', resolve));
+    const address = server.http.address(); if (!address || typeof address === 'string') throw Error('no port');
+    const url = `http://127.0.0.1:${address.port}`;
+
+    for (const origin of origins!.split(',')) {
+      const response = await fetch(`${url}/socket.io/?EIO=4&transport=polling`, { headers: { Origin: origin } });
+      expect(response.status).toBe(200);
+      expect(response.headers.get('access-control-allow-origin')).toBe(origin);
+      for (const transport of ['polling', 'websocket'] as const) {
+        const socket = connect(url, { transports: [transport], extraHeaders: { Origin: origin }, reconnection: false, timeout: 3000 });
+        clients.push(socket);
+        await new Promise<void>((resolve, reject) => { socket.once('connect', resolve); socket.once('connect_error', reject); });
+        expect(socket.connected).toBe(true);
+        socket.disconnect();
+      }
+    }
+
+    const deniedOrigin = 'https://unapproved.example';
+    const denied = await fetch(`${url}/socket.io/?EIO=4&transport=polling`, { headers: { Origin: deniedOrigin } });
+    expect(denied.status).toBe(403);
+    expect(denied.headers.get('access-control-allow-origin')).toBeNull();
+    const deniedSocket = connect(url, { transports: ['websocket'], extraHeaders: { Origin: deniedOrigin }, reconnection: false, timeout: 3000 });
+    clients.push(deniedSocket);
+    await new Promise<void>((resolve, reject) => { deniedSocket.once('connect_error', resolve); deniedSocket.once('connect', () => reject(Error('Unapproved WebSocket origin connected'))); });
+    expect(deniedSocket.connected).toBe(false);
+  });
+
   it('restores a disconnected player and their accepted guesses', async () => {
     server = createArenaServer(new RoomManager(() => Date.now(), () => 'APPLE'));
     await new Promise<void>(resolve => server!.http.listen(0, '127.0.0.1', resolve));
