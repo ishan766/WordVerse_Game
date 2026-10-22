@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
-import { ArrowLeft, ArrowRight, BarChart3, BookOpen, Check, ChevronRight, Clock3, Dna, Flame, HelpCircle, Lightbulb, Medal, Moon, RotateCcw, Settings2, Share2, Sparkles, Sun, Target, Trophy, Volume2, VolumeX, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, BarChart3, BookOpen, Check, ChevronRight, Clock3, Dna, Flame, HelpCircle, Lightbulb, Medal, Moon, RotateCcw, Settings2, Share2, Sparkles, Sun, Target, Trophy, Users, Volume2, VolumeX, X } from 'lucide-react';
 import { createSession, dailyAnswer, dailyNumber, keyboardMarks, localDate, shareText, submitGuess, useHint, type Mode, type Session } from './engine';
 import { loadProfile, loadSessions, recordFinish, saveProfile, saveSessions, streakInfo, type Profile } from './storage';
 import WordDnaView from './WordDnaView';
+import Arena from './Arena';
 
 type Dialog = 'help' | 'stats' | 'achievements' | 'settings' | 'result' | 'leaderboard' | 'dna' | null;
-type Screen = 'home' | 'game';
+type Screen = 'home' | 'game' | 'arena';
 type TimeRun = { deadline: number; solved: number; rounds: number; score: number; finished: boolean };
 
 const MODE_INFO: Record<Mode, { title: string; eyebrow: string; description: string; accent: string }> = {
@@ -180,7 +181,7 @@ export default function App() {
     sessionsRef.current = next;
     setSessions(next);
   }, []);
-  const [screen, setScreen] = useState<Screen>('home');
+  const [screen, setScreen] = useState<Screen>(() => new URLSearchParams(location.search).has('room') ? 'arena' : 'home');
   const [mode, setMode] = useState<Mode>('daily');
   const [dialog, setDialog] = useState<Dialog>(null);
   const [toast, setToast] = useState('');
@@ -249,6 +250,7 @@ export default function App() {
 
   const goHome = () => {
     setScreen('home'); setDialog(null); setTimeRun(null);
+    if (location.search) history.replaceState(null, '', location.pathname);
   };
 
   const finishRound = useCallback((finished: Session) => {
@@ -282,6 +284,7 @@ export default function App() {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') { setDialog(null); return; }
+      if (screen === 'arena') return;
       if (event.ctrlKey || event.metaKey || event.altKey || event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement ||
         (event.target instanceof HTMLElement && event.target.isContentEditable)) return;
       const key = event.key === 'Backspace' ? 'BACKSPACE' : event.key === 'Enter' ? 'ENTER' : event.key.toUpperCase();
@@ -327,13 +330,14 @@ export default function App() {
 
   return <div className={`app theme-${profile.settings.theme} ${profile.settings.highContrast ? 'high-contrast' : ''} ${motion ? '' : 'no-motion'}`}>
     <div className="ambient ambient-one" /><div className="ambient ambient-two" />
-    <header className="site-header" inert={dialog !== null}><div className="header-inner"><Logo onClick={goHome} /><nav aria-label="Main navigation"><button onClick={() => setDialog('help')} aria-label="How to play"><HelpCircle size={19} /><span>How to play</span></button><button onClick={() => setDialog('stats')} aria-label="Statistics"><BarChart3 size={19} /><span>Stats</span></button><button onClick={() => setDialog('settings')} aria-label="Settings"><Settings2 size={19} /><span>Settings</span></button></nav></div></header>
+    <header className="site-header" inert={dialog !== null}><div className="header-inner"><Logo onClick={goHome} /><nav aria-label="Main navigation"><button onClick={() => setScreen('arena')} aria-label="Wordverse Arena"><Users size={19} /><span>Arena</span></button><button onClick={() => setDialog('help')} aria-label="How to play"><HelpCircle size={19} /><span>How to play</span></button><button onClick={() => setDialog('stats')} aria-label="Statistics"><BarChart3 size={19} /><span>Stats</span></button><button onClick={() => setDialog('settings')} aria-label="Settings"><Settings2 size={19} /><span>Settings</span></button></nav></div></header>
 
     {screen === 'home' ? <main className="home-main" inert={dialog !== null}>
       <section className="hero"><div className="hero-copy"><div className="hero-overline"><span className="pulse-dot" /> A NEW WORD AWAITS</div><h1>Words are<br /><em>little worlds.</em></h1><p>Discover hidden words. Decode the clues. Every guess takes you somewhere new.</p><div className="hero-actions"><button className="button primary hero-primary" onClick={() => startMode('daily')}>{todayCompleted ? 'View today’s puzzle' : 'Play today’s puzzle'} <ArrowRight size={20} /></button><button className="button text-button" onClick={() => startMode('classic')}>Play classic <ChevronRight size={18} /></button></div><div className="hero-footnote"><span>DAILY PUZZLE {dailyLabel}</span><span className="footnote-separator" /> <span>{new Date(`${today}T00:00:00`).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}</span><span className="footnote-separator" /><span className={todayCompleted ? 'daily-status completed' : 'daily-status'}>{todayCompleted ? 'COMPLETED' : 'READY TO PLAY'}</span></div></div><div className="hero-art" aria-hidden="true"><div className="orbit orbit-one" /><div className="orbit orbit-two" /><div className="art-glow" /><div className="art-tile art-tile-1">W</div><div className="art-tile art-tile-2">O</div><div className="art-tile art-tile-3">R</div><div className="art-tile art-tile-4">D</div><div className="art-tile art-tile-5">S</div><div className="art-spark art-spark-1">✦</div><div className="art-spark art-spark-2">✦</div><div className="art-caption">ONE LETTER CAN CHANGE EVERYTHING</div></div></section>
       <section className="home-lower"><div className="modes-section"><div className="section-title"><div><span className="eyebrow">PICK YOUR PATH</span><h2>Four ways to play.</h2></div><span className="section-index">01 / EXPLORE</span></div><div className="mode-grid">{(['daily', 'classic', 'time', 'hard'] as const).map((m, i) => <button className={`mode-card mode-${m}`} key={m} onClick={() => startMode(m)}><span className="mode-card-top"><span className="mode-icon">{m === 'daily' ? <Sun size={23} /> : m === 'classic' ? <Target size={23} /> : m === 'time' ? <Clock3 size={23} /> : <Sparkles size={23} />}</span><span className="mode-number">0{i + 1}</span></span><span className="mode-name">{MODE_INFO[m].title}</span><span className="mode-description">{MODE_INFO[m].description}</span><span className="mode-link">{m === 'daily' && todayCompleted ? 'COMPLETED · VIEW PUZZLE' : 'PLAY MODE'} <ArrowRight size={17} /></span></button>)}</div></div><aside className="progress-panel"><span className="eyebrow">YOUR JOURNEY</span><div className="progress-level"><span>LEVEL</span><strong>{String(level).padStart(2, '0')}</strong></div><div className="xp-track"><div style={{ width: `${levelProgress / 5}%` }} /></div><div className="xp-caption"><span>{levelProgress} / 500 XP</span><span>NEXT LEVEL</span></div><div className="progress-divider" /><div className="progress-metrics"><div><Flame size={20} /><strong>{streak.current}</strong><span>DAY STREAK</span></div><div><Trophy size={20} /><strong>{profile.records.filter(r => r.won).length}</strong><span>WORDS FOUND</span></div>{unlockedCount > 0 && <div className="progress-milestone"><Sparkles size={15} /><span>ACHIEVEMENT UNLOCKED</span><strong>{ACHIEVEMENTS.filter(a => a.unlocked(profile)).at(-1)?.title}</strong></div>}</div><button className="progress-link" onClick={() => setDialog('achievements')}>View achievements <ArrowRight size={17} /></button></aside></section>
+      <section className="arena-home-entry"><div><span className="eyebrow">NEW · LIVE MULTIPLAYER</span><h2>Wordverse Arena</h2><p>Same word, separate boards, one live race. Create a private room for two, three or four players.</p></div><button className="button primary" onClick={() => setScreen('arena')}><Users size={18} /> Enter Arena <ArrowRight size={18} /></button></section>
       <footer className="home-footer"><span>ONE WORD AT A TIME, A WHOLE UNIVERSE OPENS.</span><button onClick={() => setDialog('leaderboard')}>Local daily leaderboard <ArrowRight size={15} /></button></footer>
-    </main> : <main className="game-main" inert={dialog !== null}>
+    </main> : screen === 'arena' ? <Arena onHome={goHome} onSolo={() => startMode('classic')} /> : <main className="game-main" inert={dialog !== null}>
       <div className="game-topline"><button className="back-link" onClick={goHome}><ArrowLeft size={18} /> All modes</button><span className="game-topline-right">{mode === 'daily' ? `DAILY ${dailyLabel}` : MODE_INFO[mode].eyebrow}</span></div>
       <section className="game-layout"><div className="game-content"><div className="game-heading"><div><span className="eyebrow"><span className="pulse-dot" /> {MODE_INFO[mode].eyebrow}</span><h1>{MODE_INFO[mode].title}<span className="heading-period">.</span></h1><p>{MODE_INFO[mode].description}</p></div>{mode === 'time' && <div className={`timer ${timeLeft <= 15 ? 'timer-urgent' : ''}`}><Clock3 size={20} /><strong>{Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}</strong></div>}</div>
         {session && <><div className="board-wrap"><GameBoard session={session} animations={motion} /></div><div className="game-message" aria-live="polite">{mode === 'time' && timeRun?.finished ? `Time's up · ${timeRun.solved} ${timeRun.solved === 1 ? 'word' : 'words'} solved · ${timeRun.score} points` : session.status === 'playing' ? `GUESS ${session.guesses.length + 1} OF 6` : session.status === 'won' ? 'WORD FOUND · BEAUTIFULLY DONE' : `THE WORD WAS ${session.answer}`}</div>

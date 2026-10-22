@@ -101,6 +101,7 @@ export function improvementTip(timeline: readonly GuessInsight[]): string | null
 }
 
 function puzzleLabel(session: Partial<Session>): string {
+  if (session.id?.startsWith('arena-')) return `Arena round ${session.id.slice(6, 12).toUpperCase()}`;
   if (session.mode === 'daily') {
     const date = session.id?.match(/^daily-v\d+-(\d{4}-\d{2}-\d{2})$/)?.[1];
     return date ? `Daily #${dailyNumber(date)} · ${date}` : 'Daily Challenge';

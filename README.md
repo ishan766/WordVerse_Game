@@ -1,6 +1,6 @@
 # Wordverse
 
-A local-first word puzzle game with Daily Challenge, Classic, Hard Mode, and a 90-second Time Attack. Daily puzzles, scores, progress, settings, and the local leaderboard are stored in this browser. No account or backend is required.
+A local-first word puzzle game with Daily Challenge, Classic, Hard Mode, and a 90-second Time Attack, plus private real-time Wordverse Arena rooms for two to four players. Solo modes, progress, settings, and the local leaderboard stay in the browser. Arena uses a separate Node.js server.
 
 ## Run
 
@@ -11,6 +11,27 @@ npm install
 npm run dev
 ```
 
+For multiplayer, run the Arena server in a second terminal:
+
+```sh
+npm run arena:dev
+```
+
+Open `http://localhost:5173` in two to four separate browser sessions. One player creates a room and shares its code or invite link; guests join and mark Ready, then the host starts. Solo Practice uses the existing Classic Play mode and does not need the server. On Windows PowerShell, use `npm.cmd` for these commands.
+
+## Arena rules and architecture
+
+- The Node server owns room membership, an unpredictable room code and reconnect token, the answer, validation, feedback, start/deadline, accepted guess sequence, and ranking. A client sees only its own guesses until the round ends.
+- Rooms hold 2, 3, or 4 players. All connected players must be ready; only the host starts or rematches. Every player has six valid guesses. Standard or Hard Mode rules use the existing canonical evaluator and dictionary.
+- Solvers rank above non-solvers; fewer valid guesses wins, then the server timestamp of the winning guess. Non-solvers rank by their strongest feedback (green = 2, yellow = 1); exact equal metrics share a rank. Solvers receive `max(20, 120 − 15 × (guesses − 1) − 10 × (rank − 1))` round points. Non-solvers receive 0.
+- The server deadline is authoritative. Browser time is only a display estimate. One socket action is acknowledged before the client shows an accepted guess. Guess sequences and a 250 ms per-player throttle reject duplicates and rapid repeats.
+- A disconnected player can resume with a per-tab session-stored 256-bit token while the room exists. Separate tabs can join as separate players. Lobbies expire after 30 minutes of inactivity, and disconnected lobby seats free up after 2 minutes; matches/results expire after 2 hours. The server stores rooms in memory, so a server restart ends all rooms. One server instance is supported; scaling to multiple instances needs a shared room store and Socket.IO adapter.
+- Completed Arena rounds expose the answer and each player's own history to Word DNA. Shared Arena results omit the answer.
+
+## Arena deployment
+
+The Vite frontend can remain on Vercel, but Vercel's static frontend alone cannot host this long-running Socket.IO process. Deploy `npm run arena:start` as a persistent Node service with WebSocket support, using Node.js 20.19+ or 22.12+. The server uses `PORT`, then `ARENA_PORT`, then 3001. Configure `ARENA_ORIGINS` as a comma-separated list of exact frontend origins (for example your Vercel domain). Set `VITE_ARENA_URL` to the public HTTPS URL of that service **at frontend build time**, then rebuild/redeploy the frontend. Browsers on an HTTPS page require an HTTPS/WSS backend. The client shows a clear unavailable message if `VITE_ARENA_URL` is absent in production. For phone testing on a local network, set `ARENA_ORIGINS` to include the phone's frontend origin, such as `http://192.168.1.10:5173`; the dev client automatically uses the same host on port 3001. See `.env.example`; it contains placeholders only. The server health endpoint is `GET /health`.
+
 On Windows PowerShell with script execution disabled, use `npm.cmd` in place of `npm`.
 
 ## Verify and build
@@ -18,6 +39,7 @@ On Windows PowerShell with script execution disabled, use `npm.cmd` in place of 
 ```sh
 npm test
 npm run build
+npm run arena:check
 npm run preview
 ```
 

@@ -10,6 +10,14 @@ beforeEach(() => localStorage.clear());
 afterEach(() => { cleanup(); vi.useRealTimers(); vi.restoreAllMocks(); });
 
 describe('interface flows', () => {
+  it('opens Arena and keeps offline Solo Practice available', () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: /enter arena/i }));
+    expect(screen.getByRole('heading', { name: /wordverse arena/i })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /play solo/i }));
+    expect(screen.getByRole('heading', { name: /classic play/i })).toBeTruthy();
+  });
+
   it('starts in Daylight and lets players choose and retain Midnight', () => {
     const first = render(<App />);
     expect(first.container.querySelector('.app')?.classList.contains('theme-light')).toBe(true);
