@@ -81,7 +81,13 @@ export class RoomManager {
   }
   private startRound(room: Room) {
     if (room.round >= TOURNAMENT_ROUNDS) throw Error('Tournament already complete');
-    const answer = this.chooseAnswer(room.usedAnswers).toUpperCase();
+    let answer = this.chooseAnswer(room.usedAnswers).toUpperCase();
+    // A tournament never repeats a target, including when a custom selector does.
+    if (room.usedAnswers.includes(answer)) {
+      const unused = DAILY_WORDS_V1.find(word => !room.usedAnswers.includes(word.toUpperCase()));
+      if (!unused) throw Error('Arena answer pool exhausted');
+      answer = unused.toUpperCase();
+    }
     if (!/^[A-Z]{5}$/.test(answer) || !VALID_WORDS.has(answer.toLowerCase())) throw Error('Invalid Arena answer');
     room.round++;
     room.status = 'playing'; room.answer = answer; room.usedAnswers.push(answer);

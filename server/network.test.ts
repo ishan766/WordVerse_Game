@@ -131,8 +131,9 @@ describe('live Arena synchronization', () => {
     expect(guestView?.players.find(p => p.name === 'Guest')?.rank).toBe(1);
   });
 
-  it('synchronizes five rounds, cumulative points, and reconnects across sockets', async () => {
-    server = createArenaServer(new RoomManager(() => Date.now(), () => 'APPLE'));
+  it('synchronizes six rounds, cumulative points, and reconnects across sockets', async () => {
+    const answers = ['APPLE', 'BRAVE', 'CRANE', 'DELTA', 'EAGLE', 'FLAME'];
+    server = createArenaServer(new RoomManager(() => Date.now(), used => answers[used.length]));
     await new Promise<void>(resolve => server!.http.listen(0, '127.0.0.1', resolve));
     const address = server.http.address(); if (!address || typeof address === 'string') throw Error('no port');
     const url = `http://127.0.0.1:${address.port}`;
@@ -149,26 +150,26 @@ describe('live Arena synchronization', () => {
     await act(guest, { type: 'ready', ready: true });
     let started = await act(host, { type: 'start' });
     let hostTotal = 0, guestTotal = 0;
-    for (let round = 1; round <= 5; round++) {
+    for (let round = 1; round <= 6; round++) {
       if (!started.ok || !started.view?.roundId) throw Error('round did not start');
       const roundId = started.view.roundId;
       expect(started.view.round).toBe(round);
       expect(started.view.answer).toBeUndefined();
-      const first = await act(host, { type: 'guess', word: 'APPLE', sequence: 1, roundId, totalPoints: 999999 });
+      const first = await act(host, { type: 'guess', word: answers[round - 1], sequence: 1, roundId, totalPoints: 999999 });
       if (!first.ok || !first.view) throw Error('host guess failed');
       const hostResult = first.view.players.find(p => p.name === 'Host')!;
       expect(hostResult.roundPoints).toBe(roundScore(1, first.view.startedAt! + hostResult.solveMs!, first.view.startedAt!, 90));
       hostTotal += hostResult.roundPoints;
       expect(hostResult.totalPoints).toBe(hostTotal);
-      const second = await act(guest, { type: 'guess', word: 'APPLE', sequence: 1, roundId });
+      const second = await act(guest, { type: 'guess', word: answers[round - 1], sequence: 1, roundId });
       if (!second.ok || !second.view) throw Error('guest guess failed');
-      expect(second.view.status).toBe(round === 5 ? 'finished' : 'round_results');
+      expect(second.view.status).toBe(round === 6 ? 'finished' : 'round_results');
       expect(second.view.completedRounds).toHaveLength(round);
       const guestResult = second.view.players.find(p => p.name === 'Guest')!;
       guestTotal += guestResult.roundPoints;
       expect(guestResult.totalPoints).toBe(guestTotal);
-      expect((await act(host, { type: 'guess', word: 'APPLE', sequence: 1, roundId })).ok).toBe(false);
-      if (round < 5) {
+      expect((await act(host, { type: 'guess', word: answers[round - 1], sequence: 1, roundId })).ok).toBe(false);
+      if (round < 6) {
         started = await act(host, { type: 'next_round', roundId });
         expect((await act(host, { type: 'next_round', roundId })).ok).toBe(false);
       }
@@ -178,7 +179,8 @@ describe('live Arena synchronization', () => {
     expect(resumed.ok && resumed.view?.status).toBe('finished');
     expect(resumed.ok && resumed.view?.players.find(p => p.name === 'Host')?.totalPoints).toBe(hostTotal);
     expect(resumed.ok && resumed.view?.players.find(p => p.name === 'Guest')?.totalPoints).toBe(guestTotal);
-    expect(resumed.ok && resumed.view?.completedRounds).toHaveLength(5);
+    expect(resumed.ok && resumed.view?.completedRounds).toHaveLength(6);
+    expect((await act(host, { type: 'next_round', roundId: resumed.ok ? resumed.view?.roundId : '' })).ok).toBe(false);
     expect(guest.connected).toBe(false); // Resume replaced the old socket.
   });
 });

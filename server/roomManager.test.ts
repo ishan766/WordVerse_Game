@@ -3,7 +3,7 @@ import { RoomManager, roundScore } from './roomManager';
 import type { ArenaSettings } from '../src/arenaProtocol';
 
 type Context = { code: string; id: string };
-function setup(answers = ['APPLE', 'BRAVE', 'CRANE', 'DELTA', 'EAGLE']) {
+function setup(answers = ['APPLE', 'BRAVE', 'CRANE', 'DELTA', 'EAGLE', 'FLAME']) {
   let now = 1000;
   const manager = new RoomManager(() => now, used => answers[used.length] ?? answers[0]);
   const advance = (ms = 300) => { now += ms; };
@@ -81,13 +81,13 @@ describe('Arena tournament authority', () => {
     expect(current(host).players.find(p => p.id === host.id)?.totalPoints).toBe(score.totalPoints);
   });
 
-  it('runs exactly five rounds, accumulates totals, and starts a clean new tournament', () => {
-    const answers = ['APPLE', 'BRAVE', 'CRANE', 'DELTA', 'EAGLE'];
+  it('runs exactly six distinct rounds, accumulates totals, and starts a clean new tournament', () => {
+    const answers = ['APPLE', 'BRAVE', 'CRANE', 'DELTA', 'EAGLE', 'FLAME'];
     const { manager, create, join, current, guess, advance } = setup(answers);
     const { code, host } = create(), guest = join(code, 'Guest');
     manager.act({ type: 'ready', ready: true }, guest.context);
     manager.act({ type: 'start' }, host);
-    for (let round = 1; round <= 5; round++) {
+    for (let round = 1; round <= 6; round++) {
       const view = current(host);
       expect(view.round).toBe(round);
       expect(view.status).toBe('playing');
@@ -97,24 +97,44 @@ describe('Arena tournament authority', () => {
       advance();
       expect(guess(guest.context, answers[round - 1], 2).ok).toBe(true);
       const result = current(host);
-      expect(result.status).toBe(round === 5 ? 'finished' : 'round_results');
+      expect(result.status).toBe(round === 6 ? 'finished' : 'round_results');
       expect(result.answer).toBe(answers[round - 1]);
       expect(result.completedRounds).toHaveLength(round);
       expect(result.completedRounds[round - 1].players).toHaveLength(2);
       expect(result.players.find(p => p.id === host.id)?.totalPoints).toBe(200 * round);
       expect(result.players.find(p => p.id === guest.context.id)?.wordsSolved).toBe(round);
-      if (round < 5) expect(manager.act({ type: 'next_round', roundId: result.roundId! }, host).ok).toBe(true);
+      if (round < 6) expect(manager.act({ type: 'next_round', roundId: result.roundId! }, host).ok).toBe(true);
     }
     const final = current(host);
-    expect(final.players.find(p => p.id === host.id)).toMatchObject({ rank: 1, totalPoints: 1000, wordsSolved: 5, totalGuesses: 5 });
-    expect(final.players.find(p => p.id === guest.context.id)).toMatchObject({ rank: 2, wordsSolved: 5, totalGuesses: 10 });
+    expect(final.completedRounds.map(round => round.answer)).toEqual(answers);
+    expect(final.players.find(p => p.id === host.id)).toMatchObject({ rank: 1, totalPoints: 1200, wordsSolved: 6, totalGuesses: 6 });
+    expect(final.players.find(p => p.id === guest.context.id)).toMatchObject({ rank: 2, wordsSolved: 6, totalGuesses: 12 });
     expect(manager.act({ type: 'next_round', roundId: final.roundId! }, host).ok).toBe(false);
-    expect(current(host).completedRounds).toHaveLength(5);
+    expect(current(host).completedRounds).toHaveLength(6);
     expect(manager.act({ type: 'play_again' }, guest.context).ok).toBe(false);
     expect(manager.act({ type: 'play_again' }, host).ok).toBe(true);
     expect(current(host)).toMatchObject({ status: 'lobby', round: 0 });
     expect(current(host).completedRounds).toHaveLength(0);
     expect(current(host).players.every(p => p.totalPoints === 0 && p.wordsSolved === 0)).toBe(true);
+  });
+
+  it('uses a distinct valid answer even if the selector repeats and resolves the sixth timeout', () => {
+    const { manager, create, join, current, advance } = setup(Array(6).fill('APPLE'));
+    const { code, host } = create(), guest = join(code, 'Guest');
+    manager.act({ type: 'ready', ready: true }, guest.context);
+    manager.act({ type: 'start' }, host);
+    for (let round = 1; round <= 6; round++) {
+      const roundId = current(host).roundId!;
+      advance(90_001);
+      expect(manager.tick()).toContain(code);
+      const result = current(host);
+      expect(result.completedRounds).toHaveLength(round);
+      expect(result.status).toBe(round === 6 ? 'finished' : 'round_results');
+      if (round < 6) expect(manager.act({ type: 'next_round', roundId }, host).ok).toBe(true);
+    }
+    expect(new Set(current(host).completedRounds.map(round => round.answer)).size).toBe(6);
+    expect(current(host).players.every(player => player.totalPoints === 0)).toBe(true);
+    expect(manager.act({ type: 'next_round', roundId: current(host).roundId! }, host).ok).toBe(false);
   });
 
   it('expires a round exactly once and preserves scores and reconnect state', () => {

@@ -1,6 +1,6 @@
 import type { Guess } from './engine';
 
-export const TOURNAMENT_ROUNDS = 5;
+export const TOURNAMENT_ROUNDS = 6;
 export type ArenaStatus = 'lobby' | 'playing' | 'round_results' | 'finished';
 export type PlayerStatus = 'waiting' | 'ready' | 'active' | 'solved' | 'failed' | 'timedout';
 export type ArenaSettings = { capacity: 2 | 3 | 4 | 5 | 6; duration: 90 | 180 | 300; difficulty: 'standard' | 'hard' };

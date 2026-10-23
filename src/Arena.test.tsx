@@ -38,10 +38,10 @@ describe('Arena connection recovery', () => {
     const players = [1, 2, 3, 4, 4, 6].map((rank, index) => ({
       id: String(index), name: `Player ${index + 1}`, host: index === 0, connected: true,
       status: 'solved' as const, attempts: 1, roundPoints: 200, totalPoints: 1000 - rank * 10,
-      wordsSolved: 5, totalGuesses: 5, totalSolveMs: 1000, rank, tie: rank === 4,
+      wordsSolved: 6, totalGuesses: 6, totalSolveMs: 1000, rank, tie: rank === 4,
     }));
     const view: ArenaView = { code: 'ABCDEFG', status: 'finished', settings: { capacity: 6, duration: 90, difficulty: 'standard' },
-      selfId: '0', ownGuesses: [], serverNow: 1000, round: 5, answer: 'APPLE', roundId: 'last', completedRounds: [], players };
+      selfId: '0', ownGuesses: [], serverNow: 1000, round: 6, answer: 'APPLE', roundId: 'last', completedRounds: Array.from({ length: 6 }, (_, index) => ({ round: index + 1, answer: 'APPLE', players: [] })), players };
     act(() => connection.handlers.get('arena:state')?.(view));
     const board = screen.getByLabelText('Tournament standings');
     expect(board.querySelectorAll('.arena-rank-gold')).toHaveLength(1);
@@ -49,5 +49,7 @@ describe('Arena connection recovery', () => {
     expect(board.querySelectorAll('.arena-rank-bronze')).toHaveLength(1);
     expect(board.querySelectorAll('.arena-rank-tie')).toHaveLength(2);
     expect(screen.getByText('TOURNAMENT COMPLETE')).toBeTruthy();
+    expect(screen.getByText(/Final standings combine all 6 rounds/)).toBeTruthy();
+    expect(screen.getByLabelText('Tournament progress').textContent).toContain('6/6 rounds completed');
   });
 });

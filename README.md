@@ -1,6 +1,6 @@
 # Wordverse
 
-A local-first word puzzle game with Daily Challenge, Classic, Hard Mode, and a 90-second Time Attack, plus private real-time five-round Wordverse Arena tournaments for two to six players. Solo modes, progress, settings, and the local leaderboard stay in the browser. Arena uses a separate Node.js server.
+A local-first word puzzle game with Daily Challenge, Classic, Hard Mode, and a 90-second Time Attack, plus private real-time six-round Wordverse Arena tournaments for two to six players. Solo modes, progress, settings, and the local leaderboard stay in the browser. Arena uses a separate Node.js server.
 
 ## Run
 
@@ -22,7 +22,7 @@ Open `http://localhost:5173` in two to six separate browser sessions. One player
 ## Arena rules and architecture
 
 - The Node server owns room membership, an unpredictable room code and reconnect token, the answer, validation, feedback, start/deadline, accepted guess sequence, scores, and ranking. A client sees only its own guesses until the round ends.
-- Rooms hold exactly 2, 3, 4, 5, or 6 players. Every selected seat must be filled and ready before the host starts. A tournament has exactly five rounds. Each player gets six valid guesses per round. Standard or Hard Mode rules use the existing canonical evaluator and dictionary. The host advances after each result; after round five the server presents final standings. Play Again returns connected players to a fresh lobby with scores reset.
+- Rooms hold exactly 2, 3, 4, 5, or 6 players. Every selected seat must be filled and ready before the host starts. A tournament has exactly six rounds, each with a distinct server-selected answer. Each player gets six valid guesses per round. Standard or Hard Mode rules use the existing canonical evaluator and dictionary. The host advances after each result; after round six the server presents final standings. Play Again returns connected players to a fresh lobby with scores reset.
 - A solve earns `100 + floor(50 * max(0, 1 - elapsed_ms / duration_ms)) + 10 * (6 - valid_guesses)` points. The maximum is **200** for a first-guess solve at round start: one guess has already been used, leaving five unused guesses. Failed and timed-out rounds earn zero. A disconnected player may reconnect before the deadline; otherwise the round times out. Points are awarded once when the server accepts a correct guess. Completed-round results are stored separately from cumulative totals.
 - Rankings use total points, then more words solved, then fewer total valid guesses, then lower cumulative solve time. Exact equals share a rank. Tied ranks receive a neutral tie card rather than an arbitrary medal.
 - The server deadline is authoritative. Browser time is only a display estimate. One socket action is acknowledged before the client shows an accepted guess. Guess sequences, round IDs, and a 250 ms per-player throttle reject duplicate, stale, and rapid actions.
@@ -42,7 +42,7 @@ For the current `https://wordversegame.vercel.app` frontend, `render.yaml` suppl
 
 The Blueprint uses Render's Free plan to avoid an automatic paid service. Free services can spin down after inactivity, and this Arena server keeps rooms only in memory, so a spin-down or redeploy ends active rooms. Use a continuously running single instance for a live competition demo.
 
-The five-round tournament changes both the Arena client protocol and server state. Deploy the same Git revision to Render and Vercel together, then refresh open browser tabs. The existing `ARENA_ORIGINS` Render allowlist must still include the exact Vercel origin. No new environment variables are required. A Render restart or deployment ends in-memory tournaments; wait for active matches to finish before deploying, or add a persistent room store before promising recovery across restarts.
+The six-round tournament changes both the Arena client protocol and server state. Deploy the same Git revision to Render and Vercel together, then refresh open browser tabs. The existing `ARENA_ORIGINS` Render allowlist must still include the exact Vercel origin. No new environment variables are required. A Render restart or deployment ends in-memory tournaments; wait for active matches to finish before deploying, or add a persistent room store before promising recovery across restarts.
 
 On Windows PowerShell with script execution disabled, use `npm.cmd` in place of `npm`.
 
