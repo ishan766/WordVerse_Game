@@ -25,6 +25,7 @@ io.on('connection', socket => {
   socket.on('arena:action', (action: ArenaAction, reply: (value: ArenaReply) => void) => {
     if (typeof reply !== 'function') return;
     if (!action || typeof action !== 'object' || typeof action.type !== 'string') { reply({ ok: false, error: 'Invalid action.' }); return; }
+    if (context && sockets.get(context.id) !== socket.id) { reply({ ok: false, error: 'This connection has been replaced. Reconnect to continue.' }); return; }
     if (context && ['create', 'join', 'resume'].includes(action.type)) { reply({ ok: false, error: 'Leave your current room first.' }); return; }
     if (['create', 'join'].includes(action.type)) {
       if (Date.now() - lastRoomAction < 750) { reply({ ok: false, error: 'Please wait before trying another room.' }); return; }
@@ -36,8 +37,8 @@ io.on('connection', socket => {
       context = { code: result.view.code, id: result.view.selfId };
       // A resumed player replaces the previous connection; its old socket can no longer act.
       const oldSocketId = sockets.get(context.id);
-      if (oldSocketId && oldSocketId !== socket.id) io.sockets.sockets.get(oldSocketId)?.disconnect(true);
       sockets.set(context.id, socket.id);
+      if (oldSocketId && oldSocketId !== socket.id) io.sockets.sockets.get(oldSocketId)?.disconnect(true);
     }
     reply(result);
     if (result.ok && context) {

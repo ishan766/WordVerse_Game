@@ -1,6 +1,6 @@
 # Wordverse
 
-A local-first word puzzle game with Daily Challenge, Classic, Hard Mode, and a 90-second Time Attack, plus private real-time Wordverse Arena rooms for two to four players. Solo modes, progress, settings, and the local leaderboard stay in the browser. Arena uses a separate Node.js server.
+A local-first word puzzle game with Daily Challenge, Classic, Hard Mode, and a 90-second Time Attack, plus private real-time five-round Wordverse Arena tournaments for two to six players. Solo modes, progress, settings, and the local leaderboard stay in the browser. Arena uses a separate Node.js server.
 
 ## Run
 
@@ -17,16 +17,17 @@ For multiplayer, run the Arena server in a second terminal:
 npm run arena:dev
 ```
 
-Open `http://localhost:5173` in two to four separate browser sessions. One player creates a room and shares its code or invite link; guests join and mark Ready, then the host starts. Solo Practice uses the existing Classic Play mode and does not need the server. On Windows PowerShell, use `npm.cmd` for these commands.
+Open `http://localhost:5173` in two to six separate browser sessions. One player creates a room and shares its code or invite link; guests join and mark Ready, then the host starts when every selected seat is filled. Solo Practice uses the existing Classic Play mode and does not need the server. On Windows PowerShell, use `npm.cmd` for these commands.
 
 ## Arena rules and architecture
 
-- The Node server owns room membership, an unpredictable room code and reconnect token, the answer, validation, feedback, start/deadline, accepted guess sequence, and ranking. A client sees only its own guesses until the round ends.
-- Rooms hold 2, 3, or 4 players. All connected players must be ready; only the host starts or rematches. Every player has six valid guesses. Standard or Hard Mode rules use the existing canonical evaluator and dictionary.
-- Solvers rank above non-solvers; fewer valid guesses wins, then the server timestamp of the winning guess. Non-solvers rank by their strongest feedback (green = 2, yellow = 1); exact equal metrics share a rank. Solvers receive `max(20, 120 − 15 × (guesses − 1) − 10 × (rank − 1))` round points. Non-solvers receive 0.
-- The server deadline is authoritative. Browser time is only a display estimate. One socket action is acknowledged before the client shows an accepted guess. Guess sequences and a 250 ms per-player throttle reject duplicates and rapid repeats.
-- A disconnected player can resume with a per-tab session-stored 256-bit token while the room exists. Separate tabs can join as separate players. Lobbies expire after 30 minutes of inactivity, and disconnected lobby seats free up after 2 minutes; matches/results expire after 2 hours. The server stores rooms in memory, so a server restart ends all rooms. One server instance is supported; scaling to multiple instances needs a shared room store and Socket.IO adapter.
-- Completed Arena rounds expose the answer and each player's own history to Word DNA. Shared Arena results omit the answer.
+- The Node server owns room membership, an unpredictable room code and reconnect token, the answer, validation, feedback, start/deadline, accepted guess sequence, scores, and ranking. A client sees only its own guesses until the round ends.
+- Rooms hold exactly 2, 3, 4, 5, or 6 players. Every selected seat must be filled and ready before the host starts. A tournament has exactly five rounds. Each player gets six valid guesses per round. Standard or Hard Mode rules use the existing canonical evaluator and dictionary. The host advances after each result; after round five the server presents final standings. Play Again returns connected players to a fresh lobby with scores reset.
+- A solve earns `100 + floor(50 * max(0, 1 - elapsed_ms / duration_ms)) + 10 * (6 - valid_guesses)` points. The maximum is **200** for a first-guess solve at round start: one guess has already been used, leaving five unused guesses. Failed and timed-out rounds earn zero. A disconnected player may reconnect before the deadline; otherwise the round times out. Points are awarded once when the server accepts a correct guess. Completed-round results are stored separately from cumulative totals.
+- Rankings use total points, then more words solved, then fewer total valid guesses, then lower cumulative solve time. Exact equals share a rank. Tied ranks receive a neutral tie card rather than an arbitrary medal.
+- The server deadline is authoritative. Browser time is only a display estimate. One socket action is acknowledged before the client shows an accepted guess. Guess sequences, round IDs, and a 250 ms per-player throttle reject duplicate, stale, and rapid actions.
+- A disconnected player can resume with a per-tab session-stored 256-bit token while the room exists. Reusing a display name in the same lobby is rejected; guest accounts are not available, so someone using a different name in another tab cannot be proven to be the same person. Lobbies expire after 30 minutes of inactivity, and disconnected lobby seats free up after 2 minutes; tournaments/results expire after 2 hours of inactivity. The server stores rooms in memory, so a server restart ends all rooms and their scores. Durable recovery requires a persistent room store and, for multiple instances, a Socket.IO adapter.
+- Completed rounds expose the answer and each player's own guess history to Word DNA. Shared Arena results omit answers.
 
 ## Arena deployment
 
@@ -40,6 +41,8 @@ For the current `https://wordversegame.vercel.app` frontend, `render.yaml` suppl
 4. Reload the site, create a room, and join from another browser session. If the frontend domain changes, update `ARENA_ORIGINS` on the server to match the new exact origin.
 
 The Blueprint uses Render's Free plan to avoid an automatic paid service. Free services can spin down after inactivity, and this Arena server keeps rooms only in memory, so a spin-down or redeploy ends active rooms. Use a continuously running single instance for a live competition demo.
+
+The five-round tournament changes both the Arena client protocol and server state. Deploy the same Git revision to Render and Vercel together, then refresh open browser tabs. The existing `ARENA_ORIGINS` Render allowlist must still include the exact Vercel origin. No new environment variables are required. A Render restart or deployment ends in-memory tournaments; wait for active matches to finish before deploying, or add a persistent room store before promising recovery across restarts.
 
 On Windows PowerShell with script execution disabled, use `npm.cmd` in place of `npm`.
 
