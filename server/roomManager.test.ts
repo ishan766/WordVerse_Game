@@ -137,6 +137,54 @@ describe('Arena tournament authority', () => {
     expect(manager.act({ type: 'next_round', roundId: current(host).roundId! }, host).ok).toBe(false);
   });
 
+  it('preserves prior points through zero-point losses and totals the six-round ledger once', () => {
+    const answers = ['APPLE', 'BRAVE', 'CRANE', 'DELTA', 'EAGLE', 'FLAME'];
+    const { manager, create, join, current, guess, advance } = setup(answers);
+    const { code, host } = create(), guest = join(code, 'Guest');
+    manager.act({ type: 'ready', ready: true }, guest.context);
+    manager.act({ type: 'start' }, host);
+    const expected = [200, 0, 200, 0, 200, 200];
+    for (let round = 1; round <= 6; round++) {
+      const roundId = current(host).roundId!;
+      if (expected[round - 1]) expect(guess(host, answers[round - 1], 1).ok).toBe(true);
+      else expect(guess(host, 'ALBUM', 1).ok).toBe(true);
+      advance(90_001);
+      expect(manager.tick()).toContain(code);
+      const result = current(host);
+      const entry = result.completedRounds[round - 1].players.find(player => player.id === host.id)!;
+      expect(entry.points).toBe(expected[round - 1]);
+      expect(entry.totalPoints).toBe(expected.slice(0, round).reduce((sum, points) => sum + points, 0));
+      expect(result.players.find(player => player.id === host.id)?.totalPoints).toBe(entry.totalPoints);
+      expect(manager.tick()).not.toContain(code);
+      expect(guess(host, answers[round - 1], 2, roundId).ok).toBe(false);
+      if (round < 6) expect(manager.act({ type: 'next_round', roundId }, host).ok).toBe(true);
+    }
+    const final = current(host);
+    expect(final.status).toBe('finished');
+    expect(final.players.find(player => player.id === host.id)?.totalPoints).toBe(800);
+    expect(final.players.find(player => player.id === guest.context.id)?.totalPoints).toBe(0);
+    expect(final.completedRounds.flatMap(round => round.players.filter(player => player.id === guest.context.id).map(player => player.points))).toEqual([0, 0, 0, 0, 0, 0]);
+    expect(manager.act({ type: 'resume', code, token: guest.token })).toMatchObject({ ok: true, view: { status: 'finished' } });
+    expect(current(host).players.find(player => player.id === host.id)?.totalPoints).toBe(800);
+  });
+
+  it('awards no points when all six accepted guesses are wrong', () => {
+    const { manager, create, join, current, guess, advance } = setup();
+    const { code, host } = create(), guest = join(code, 'Guest');
+    manager.act({ type: 'ready', ready: true }, guest.context);
+    manager.act({ type: 'start' }, host);
+    expect(guess(host, 'APPLE', 1).ok).toBe(true);
+    for (let sequence = 1; sequence <= 6; sequence++) {
+      if (sequence > 1) advance();
+      expect(guess(guest.context, 'ALBUM', sequence).ok).toBe(true);
+    }
+    const result = current(host);
+    expect(result.status).toBe('round_results');
+    expect(result.players.find(player => player.id === guest.context.id)).toMatchObject({ status: 'failed', roundPoints: 0, totalPoints: 0, attempts: 6 });
+    expect(result.completedRounds[0].players.find(player => player.id === guest.context.id)).toMatchObject({ status: 'failed', points: 0, totalPoints: 0 });
+    expect(result.players.find(player => player.id === host.id)?.totalPoints).toBe(200);
+  });
+
   it('expires a round exactly once and preserves scores and reconnect state', () => {
     const { manager, create, join, advance, current, guess } = setup();
     const { code, host } = create(), guest = join(code, 'Guest');

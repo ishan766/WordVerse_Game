@@ -20,3 +20,26 @@
 @media(max-width:650px){.arena-rank{grid-template-columns:75px minmax(0,1fr);gap:8px;padding:12px}.arena-rank-place{font-size:16px;flex-direction:column;align-items:flex-start;gap:2px}.arena-rank-place small{font-size:9px}.arena-rank-score{grid-column:2;text-align:left}.arena-rank-details{grid-column:1 / -1}.arena-final-stats>div{grid-template-columns:1fr}.arena-round-chip{font-size:10px}}
 .arena-final-stats h3{font-size:18px;margin:24px 0 12px}.arena-round-history{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px}.arena-round-history>div{display:grid;gap:6px;padding:12px;background:var(--panel2);border:1px solid var(--line);border-radius:10px}.arena-round-history span{font-size:12px;color:var(--muted)}
 .arena-tournament-progress{margin:-8px 0 22px;padding:14px 18px;background:var(--panel);border:1px solid var(--line);border-radius:16px}.arena-tournament-progress>div{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline}.arena-tournament-progress strong{color:var(--text)}.arena-tournament-progress span{color:var(--muted);font-size:13px}.arena-tournament-progress ol{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;list-style:none;margin:12px 0 0;padding:0}.arena-tournament-progress li{min-width:0;text-align:center;padding:5px 0;border:1px solid var(--line);border-radius:8px;color:var(--muted);font-size:12px;font-weight:800}.arena-tournament-progress li.complete{background:var(--mint);border-color:var(--mint);color:#07151b}.arena-tournament-progress li.current{border-color:var(--cyan);color:var(--text);box-shadow:inset 0 0 0 1px var(--cyan)}
+
+/* Arena standings use a real table so numeric columns align across 2–6 players. */
+.arena-leaderboard-heading h2{margin:4px 0 0}.arena-leaderboard-context{margin:8px 0 16px!important;font-size:13px}
+.arena-table-scroll{max-width:100%;overflow-x:auto;overscroll-behavior-inline:contain;border:1px solid var(--line);border-radius:14px;background:var(--panel2)}
+.arena-table-scroll:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
+.arena-standings-table,.arena-score-table{width:100%;border-collapse:separate;border-spacing:0;color:var(--text);font-variant-numeric:tabular-nums}
+.arena-standings-table{min-width:590px}.arena-score-table{min-width:620px}
+.arena-standings-table th,.arena-score-table thead th{padding:13px 12px;background:var(--panel2);color:var(--muted);font-size:10px;font-weight:800;letter-spacing:.09em;text-align:left;text-transform:uppercase;white-space:nowrap;border-bottom:1px solid var(--line)}
+.arena-standings-table td,.arena-score-table td,.arena-score-table tbody th{padding:13px 12px;border-bottom:1px solid var(--line);font-size:13px;vertical-align:middle}
+.arena-standings-table tr:last-child td,.arena-score-table tr:last-child td,.arena-score-table tr:last-child th{border-bottom:0}
+.arena-standings-table .numeric{text-align:right}.arena-standings-table th:nth-child(1){width:90px}.arena-standings-table th:nth-child(2){min-width:150px}
+.arena-standings-table tbody tr{transition:background-color .18s ease}.arena-standings-table tbody tr:hover,.arena-score-table tbody tr:hover{background:rgba(83,217,245,.07)}
+.arena-standings-table tbody tr.arena-rank-gold{background:rgba(255,199,106,.13)}.arena-standings-table tbody tr.arena-rank-silver{background:rgba(166,191,207,.13)}.arena-standings-table tbody tr.arena-rank-bronze{background:rgba(192,126,87,.12)}
+.arena-standings-table tbody tr.arena-rank-self td:first-child,.arena-score-table tbody tr.arena-rank-self th:first-child{box-shadow:inset 3px 0 var(--cyan)}
+.arena-standings-table .arena-rank-place{display:inline-flex;align-items:center;gap:4px;font-size:12px;white-space:nowrap}.arena-rank-tie .arena-rank-place{color:var(--text)}
+.arena-table-player{display:flex;align-items:center;gap:10px;min-width:0}.arena-table-player .arena-avatar{width:34px;height:34px;flex:none;font-size:13px}
+.arena-table-identity{display:grid;min-width:0;gap:2px}.arena-table-identity strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:160px}.arena-table-identity small{font-size:11px;color:var(--muted);white-space:nowrap}.arena-table-identity small b{color:var(--cyan)}
+.arena-points{display:block;font-size:20px;line-height:1.1;color:var(--text);animation:arena-score-enter .28s ease-out}.arena-points-change{display:block;margin-top:3px;color:var(--muted);font-size:10px;white-space:nowrap}
+.arena-score-table th:not(:first-child),.arena-score-table td{text-align:right}.arena-score-table tbody th{max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;font-weight:700}
+.arena-score-table .arena-breakdown-total{font-weight:900;color:var(--mint)}.arena-breakdown{margin-top:20px}.arena-breakdown>p{font-size:13px;margin:8px 0 16px}.arena-table-empty{padding:16px;margin:0!important}
+@keyframes arena-score-enter{from{opacity:.5;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:650px){.arena-standings-table td,.arena-score-table td,.arena-score-table tbody th{padding:11px 10px}.arena-table-scroll{margin:0 -2px}.arena-leaderboard-context{font-size:12px}}
+@media(prefers-reduced-motion:reduce){.arena-points{animation:none}.arena-standings-table tbody tr{transition:none}}

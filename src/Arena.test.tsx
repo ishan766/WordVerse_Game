@@ -52,4 +52,29 @@ describe('Arena connection recovery', () => {
     expect(screen.getByText(/Final standings combine all 6 rounds/)).toBeTruthy();
     expect(screen.getByLabelText('Tournament progress').textContent).toContain('6/6 rounds completed');
   });
+
+  it('shows intermediate standings through round five and final results only after round six', () => {
+    render(<Arena onHome={() => {}} onSolo={() => {}} />);
+    const players = [
+      { id: 'a', name: 'Alex', host: true, connected: true, status: 'solved' as const, attempts: 1, roundPoints: 200, totalPoints: 1000, wordsSolved: 5, totalGuesses: 5, totalSolveMs: 0, rank: 1, tie: false },
+      { id: 'b', name: 'Blair', host: false, connected: true, status: 'timedout' as const, attempts: 0, roundPoints: 0, totalPoints: 0, wordsSolved: 0, totalGuesses: 0, totalSolveMs: 0, rank: 2, tie: false },
+    ];
+    const rounds = Array.from({ length: 5 }, (_, index) => ({ round: index + 1, answer: 'APPLE', players: [
+      { id: 'a', status: 'solved' as const, guesses: 1, points: 200, totalPoints: (index + 1) * 200 },
+      { id: 'b', status: 'timedout' as const, guesses: 0, points: 0, totalPoints: 0 },
+    ] }));
+    const view: ArenaView = { code: 'ABCDEFG', status: 'round_results', settings: { capacity: 2, duration: 90, difficulty: 'standard' }, selfId: 'a', ownGuesses: [], serverNow: 1000, round: 5, answer: 'APPLE', roundId: 'five', completedRounds: rounds, players };
+    act(() => connection.handlers.get('arena:state')?.(view));
+    expect(screen.getByText('ROUND 5 / 6 COMPLETE')).toBeTruthy();
+    expect(screen.queryByText('TOURNAMENT COMPLETE')).toBeNull();
+    expect(screen.getByRole('button', { name: /Next round/i })).toBeTruthy();
+    const final: ArenaView = { ...view, status: 'finished', round: 6, roundId: 'six', completedRounds: [...rounds, { round: 6, answer: 'BRAVE', players: [
+      { id: 'a', status: 'solved', guesses: 1, points: 200, totalPoints: 1200 },
+      { id: 'b', status: 'timedout', guesses: 0, points: 0, totalPoints: 0 },
+    ] }], players: [{ ...players[0], totalPoints: 1200, wordsSolved: 6 }, players[1]] };
+    act(() => connection.handlers.get('arena:state')?.(final));
+    expect(screen.getByText('TOURNAMENT COMPLETE')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Next round/i })).toBeNull();
+    expect(screen.getByLabelText('Round-by-round scores').textContent).toContain('1200');
+  });
 });

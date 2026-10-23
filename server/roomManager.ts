@@ -102,12 +102,21 @@ export class RoomManager {
     if (room.status !== 'playing') return;
     room.status = room.round === TOURNAMENT_ROUNDS ? 'finished' : 'round_results';
     room.updatedAt = this.now();
-    for (const p of room.players) if (p.status === 'active') p.status = 'timedout';
+    for (const p of room.players) {
+      if (p.status === 'active') p.status = 'timedout';
+      if (p.status !== 'solved') p.roundPoints = 0;
+    }
     room.completedRounds.push({ round: room.round, answer: room.answer!, players: room.players.map(p => ({
       id: p.id, status: p.status as 'solved' | 'failed' | 'timedout', guesses: p.guesses.length,
       ...(p.solvedAt !== undefined ? { solveMs: p.solvedAt - room.startedAt! } : {}),
       points: p.roundPoints, totalPoints: p.totalPoints,
     })) });
+    // Completed rounds are the authoritative ledger. A loss adds zero and never
+    // removes points from earlier rounds, even after reconnecting.
+    for (const p of room.players) {
+      p.totalPoints = room.completedRounds.reduce((total, round) => total + (round.players.find(result => result.id === p.id)?.points ?? 0), 0);
+      room.completedRounds.at(-1)!.players.find(result => result.id === p.id)!.totalPoints = p.totalPoints;
+    }
     this.transferHost(room);
   }
   tick(): string[] {
